@@ -13,7 +13,7 @@ namespace AspNetLoggingMiddleware.Controllers
     {
         private static readonly string[] Summaries = new[]
         {
-            "Havazás", "ÁÉÍÓÚ", "Harmatos", "Hideg", "Esős", "Fagy", "Borult", "Hűvös", "Ködös", "Ónos-szitálás"
+            "Ávbnfgd", "Épqrst", "Őijkl", "Őefgh", "Űabcd", "ŐASDFGH","áŐ76633225499","ü9HTUIDnbv","ÉüŰhfsf4422"
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
@@ -27,10 +27,10 @@ namespace AspNetLoggingMiddleware.Controllers
         public IEnumerable<WeatherForecast> Get()
         {
             var rng = new Random();
-            var data = Enumerable.Range(1, 10000).Select(index => new WeatherForecast
+            var data = Enumerable.Range(1, 100000).Select(index => new WeatherForecast
             {
                 Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
+                TemperatureC = rng.Next(-20, 85),
                 Summary = Summaries[rng.Next(Summaries.Length)]
             })
             .ToList();

@@ -1,6 +1,6 @@
 using System;
 
-namespace AspNetLoggingMiddleware
+namespace AspNetLoggingMiddleware.Controllers
 {
     public class WeatherForecast
     {

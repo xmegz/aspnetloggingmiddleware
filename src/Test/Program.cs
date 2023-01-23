@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -13,6 +14,14 @@ namespace AspNetLoggingMiddleware
     {
         public static void Main(string[] args)
         {
+            string result;
+
+            if (GCSettings.IsServerGC == true)
+                result = "server";
+            else
+                result = "workstation";
+            Console.WriteLine("The {0} garbage collector is running.", result);
+
             CreateHostBuilder(args).Build().Run();
         }
 

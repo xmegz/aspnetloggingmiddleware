@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.IO;
 using System;
+using System.Diagnostics;
 using System.IO;
-using System.IO.Pipelines;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,109 +19,70 @@ namespace AspNetLoggingMiddleware.Middlewares
             this._recyclableMemoryStreamManager = new RecyclableMemoryStreamManager();
         }
 
-        private async Task _appendRequestBody(HttpContext context, StringBuilder sb)
-        {
-            var request = context.Request;
 
-            if ((request.Body.CanRead) && (request.ContentLength > 0))
-            {
-                //Body buffered and context.Request.Body stream changed at this point
-                context.Request.EnableBuffering();
-
-                try
-                {
-                    while (true)
-                    {
-                        var reader = context.Request.BodyReader;
-
-                        ReadResult readResult = await reader.ReadAsync();
-                        var buffer = readResult.Buffer;
-
-                        if (readResult.IsCanceled)
-                            break;
-
-                        if ((readResult.IsCompleted) && (buffer.Length > 0))
-                            sb.AddReadOnlySequenceUtf8String(buffer);
-
-                        reader.AdvanceTo(buffer.Start, buffer.End);
-
-                        if (readResult.IsCompleted)
-                            break;
-
-                        if (context.RequestAborted.IsCancellationRequested)
-                            break;
-                    }
-                }
-                finally
-                {
-                    request.Body.Position = 0;
-                }
-            }
-        }
-
-        private async Task _logRequest(HttpContext context)
+        private async Task LogRequest(HttpContext context)
         {
             var sb = new StringBuilder(256);
             var request = context.Request;
 
-            sb.Append("req: ");
+            sb.Append("req :");
             sb.Append(request.Scheme);
             sb.Append(" ");
             sb.Append(request.Host);
             sb.Append(request.Path);
             sb.Append(request.QueryString);
             sb.Append(" ");
-            await _appendRequestBody(context, sb);
+            await sb.AppendRequestBody(context, 64 * 1024);
 
             Console.WriteLine(sb.ToString());
         }
 
-        private async Task<string> _getResponseBody(HttpContext context)
+        private async Task LogResponse(HttpContext context, Stopwatch stopwatch)
         {
-            var response = context.Response;
-            var body = response?.Body;
-
-            string bodyAsString = null;
-
-            if ((body.CanRead) && (body.Length > 0) && (body.Length < (100 * 1024)))
-            {
-                bodyAsString = await new StreamReader(body, Encoding.UTF8).ReadToEndAsync();
-            }
-
-            return bodyAsString;
-        }
-
-        private async Task _logResponse(HttpContext context)
-        {
+            var sb = new StringBuilder(256);
             var request = context.Request;
-            var body = await this._getResponseBody(context);
 
-            Console.WriteLine($"resp: {request.Scheme} {request.Host}{request.Path} {request.QueryString} {body?.Length} {body}");
+            sb.Append("resp :");
+            sb.Append(request.Scheme);
+            sb.Append(" ");
+            sb.Append(request.Host);
+            sb.Append(request.Path);
+            sb.Append(request.QueryString);
+            sb.Append(" ");
+            await sb.AppendResponseBody(context, 64 * 1024);
+
+            stopwatch.Stop();
+            sb.Append(" Time: ");
+            sb.Append(stopwatch.ElapsedMilliseconds);
+
+            Console.WriteLine(sb.ToString());
         }
 
         public async Task InvokeAsync(HttpContext context)
         {
-            await this._logRequest(context);
+            Stopwatch stopwath = Stopwatch.StartNew();
 
-            await _next(context);
+            await this.LogRequest(context);
 
-            /*
+            //await _next(context);
+
+            
             var originalBodyStream = context.Response.Body;
 
-            //using (var responseBody = new MemoryStream())
             using (var responseBody = this._recyclableMemoryStreamManager.GetStream())
             {
                 context.Response.Body = responseBody;
 
                 await _next(context);
 
-                responseBody.Seek(0, SeekOrigin.Begin);
-                await this._logResponse(context);
-                responseBody.Seek(0, SeekOrigin.Begin);
+                //responseBody.Seek(0, SeekOrigin.Begin);
+                await this.LogResponse(context, stopwath);
+                //responseBody.Seek(0, SeekOrigin.Begin);
 
                 await responseBody.CopyToAsync(originalBodyStream);
             }
-            */
+            
+
         }
     }
 }
